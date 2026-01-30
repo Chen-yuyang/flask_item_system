@@ -1,136 +1,67 @@
 {% extends "base.html" %}
 
-{% block title %}工程模式控制台{% endblock %}
+{% block title %}工程师控制台{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="text-danger fw-bold"><i class="bi bi-cone-striped me-2"></i>工程模式控制台</h2>
-        <p class="text-muted mb-0">Diagnostic & Maintenance Toolkit</p>
+<div class="row mb-4 align-items-center">
+    <div class="col">
+        <h2 class="text-danger"><i class="fas fa-user-secret me-2"></i>工程师控制台</h2>
+        <p class="text-muted mb-0">Current Status: <strong>God Mode Active</strong> | Session-based Authentication</p>
     </div>
-    <div>
-        <span class="badge bg-danger p-2 me-2">SESSION ACTIVE</span>
-        <a href="{{ url_for('engineer.logout') }}" class="btn btn-outline-danger btn-sm">退出工程模式</a>
+    <div class="col-auto">
+        <a href="{{ url_for('engineer.logout') }}" class="btn btn-outline-danger">
+            <i class="fas fa-sign-out-alt me-1"></i>退出模式
+        </a>
     </div>
 </div>
 
-<ul class="nav nav-tabs mb-4" id="engineerTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link {{ 'active' if not active_tab or active_tab == 'tasks' }}" id="tasks-tab" data-bs-toggle="tab" data-bs-target="#tasks" type="button" role="tab">
-            <i class="bi bi-lightning-charge me-2"></i>任务触发器
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link {{ 'active' if active_tab == 'sql' }}" id="sql-tab" data-bs-toggle="tab" data-bs-target="#sql" type="button" role="tab">
-            <i class="bi bi-database me-2"></i>只读 SQL 控制台
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link {{ 'active' if active_tab == 'logs' }}" id="logs-tab" onclick="window.location.href='{{ url_for('engineer.view_logs') }}'" type="button" role="tab">
-            <i class="bi bi-journal-code me-2"></i>实时日志
-        </button>
-    </li>
-</ul>
-
-<div class="tab-content" id="engineerTabsContent">
-
-    <div class="tab-pane fade {{ 'show active' if not active_tab or active_tab == 'tasks' }}" id="tasks" role="tabpanel">
-        <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body p-4">
-                <h5 class="card-title fw-bold mb-3">手动触发定时任务</h5>
-                <div class="alert alert-info mb-4">
-                    <i class="bi bi-info-circle me-1"></i>
-                    用于在非调度周期内强行执行后台逻辑，适用于数据修复或测试。
+<div class="row">
+    <!-- 数据库全能管理板块 -->
+    <div class="col-md-12">
+        <div class="card shadow border-danger">
+            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-database me-2"></i>全局数据管理 (Global Data Access)</h5>
+                <span class="badge bg-white text-danger">Direct DB Access</span>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning border-warning">
+                    <i class="fas fa-radiation me-2"></i>
+                    <strong>高危操作区：</strong> 您拥有对所有数据表的读写权限。修改不经过业务逻辑验证，请谨慎操作。
                 </div>
 
+                <h6 class="card-subtitle mb-3 text-muted">检测到以下数据模型：</h6>
                 <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="card h-100 bg-light border-0">
-                            <div class="card-body">
-                                <h6>预约状态流转 (update_reservation_status)</h6>
-                                <p class="small text-muted">处理：待开始->生效，生效->作废/冲突，冲突->恢复。</p>
-                                <form action="{{ url_for('engineer.trigger_task', task_name='update_reservation_status') }}" method="post">
-                                    <button type="submit" class="btn btn-primary w-100">
-                                        <i class="bi bi-play-fill me-1"></i>立即执行
-                                    </button>
-                                </form>
+                    {% for table in tables %}
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <a href="{{ url_for('engineer.view_table', model_name=table) }}" class="text-decoration-none">
+                            <div class="card h-100 border-secondary engineer-card">
+                                <div class="card-body text-center d-flex flex-column justify-content-center">
+                                    <div class="mb-2"><i class="fas fa-table fa-2x text-secondary"></i></div>
+                                    <h6 class="card-title text-dark mb-0 fw-bold">{{ table }}</h6>
+                                </div>
                             </div>
-                        </div>
+                        </a>
                     </div>
-                    <div class="col-md-6">
-                        <div class="card h-100 bg-light border-0">
-                            <div class="card-body">
-                                <h6>逾期检查与提醒 (check_overdue)</h6>
-                                <p class="small text-muted">扫描超过 10 天未归还的记录并发送邮件。</p>
-                                <form action="{{ url_for('engineer.trigger_task', task_name='check_overdue') }}" method="post">
-                                    <button type="submit" class="btn btn-warning text-dark w-100">
-                                        <i class="bi bi-envelope-exclamation me-1"></i>立即执行
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
+                    {% endfor %}
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="tab-pane fade {{ 'show active' if active_tab == 'sql' }}" id="sql" role="tabpanel">
-        <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-body p-4">
-                <form action="{{ url_for('engineer.sql_console') }}" method="post" class="mb-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">SQL 查询语句 (仅限 SELECT)</label>
-                        <textarea name="sql" class="form-control font-monospace bg-light" rows="3" placeholder="SELECT * FROM user WHERE username = 'admin';">{{ sql }}</textarea>
-                    </div>
-                    <button type="submit" class="btn btn-success">
-                        <i class="bi bi-terminal me-1"></i> 执行查询
-                    </button>
-                </form>
-
-                {% if error %}
-                <div class="alert alert-danger">
-                    <i class="bi bi-x-circle-fill me-2"></i>{{ error }}
-                </div>
-                {% endif %}
-
-                {% if result %}
-                <div class="table-responsive bg-white border rounded">
-                    <table class="table table-sm table-striped table-hover mb-0 font-monospace small">
-                        <thead class="table-dark">
-                            <tr>
-                                {% for key in result.keys %}
-                                <th>{{ key }}</th>
-                                {% endfor %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in result.data %}
-                            <tr>
-                                {% for cell in row %}
-                                <td>{{ cell }}</td>
-                                {% endfor %}
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                <div class="mt-2 text-muted small">共找到 {{ result.data|length }} 条结果</div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div class="tab-pane fade {{ 'show active' if active_tab == 'logs' }}" id="logs" role="tabpanel">
-        <div class="card border-0 shadow-sm rounded-4 bg-dark text-light">
-            <div class="card-header bg-secondary bg-opacity-25 border-bottom border-secondary d-flex justify-content-between align-items-center">
-                <span class="font-monospace"><i class="bi bi-file-text me-2"></i>app.log (Last 200 lines)</span>
-                <a href="{{ url_for('engineer.view_logs') }}" class="btn btn-sm btn-outline-light"><i class="bi bi-arrow-clockwise"></i> 刷新</a>
-            </div>
-            <div class="card-body p-0">
-                <pre class="m-0 p-3" style="height: 500px; overflow-y: auto; font-size: 0.85rem; color: #00ff00;">{% if logs %}{% for line in logs %}{{ line }}{% endfor %}{% else %}暂无日志内容...{% endif %}</pre>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .engineer-card {
+        transition: all 0.2s ease;
+        background-color: #f8f9fa;
+    }
+    .engineer-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        background-color: #fff;
+        border-color: #dc3545 !important;
+    }
+    .engineer-card:hover i, .engineer-card:hover h6 {
+        color: #dc3545 !important;
+    }
+</style>
 {% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}{{ model_name }} - 数据浏览{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h3 class="mb-1"><i class="fas fa-table me-2"></i>{{ model_name }}</h3>
+        <span class="text-muted small">共 {{ pagination.total }} 条记录</span>
+    </div>
+    <div>
+        <a href="{{ url_for('engineer.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-level-up-alt me-1"></i>返回
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover table-striped mb-0 table-bordered align-middle table-sm">
+            <thead class="table-dark">
+                <tr>
+                    {% for col in columns %}
+                    <th style="white-space: nowrap;">{{ col }}</th>
+                    {% endfor %}
+                    <th class="text-center bg-dark text-white position-sticky end-0" style="min-width: 100px;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    {% for col in columns %}
+                    <td class="text-truncate" style="max-width: 150px;" title="{{ item[col] }}">
+                        {{ item[col] }}
+                    </td>
+                    {% endfor %}
+                    <td class="text-center position-sticky end-0 bg-white border-start">
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('engineer.edit_record', model_name=model_name, id=item.id) }}" class="btn btn-outline-primary" title="Edit">
+                                <i class="fas fa-pen"></i>
+                            </a>
+                            <button type="button" class="btn btn-outline-danger" title="Delete"
+                                    onclick="if(confirm('警告：确定要物理删除 ID {{ item.id }} 吗？此操作不可逆！')) { document.getElementById('del-{{ item.id }}').submit(); }">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <form id="del-{{ item.id }}" action="{{ url_for('engineer.delete_record', model_name=model_name, id=item.id) }}" method="post" style="display:none;"></form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="{{ columns|length + 1 }}" class="text-center py-5 text-muted">
+                        暂无数据
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pagination and pagination.pages > 1 %}
+    <div class="card-footer bg-white py-2">
+        <nav>
+            <ul class="pagination justify-content-center pagination-sm mb-0">
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        {% if pagination.page == page_num %}
+                        <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                        {% else %}
+                        <li class="page-item"><a class="page-link" href="{{ url_for('engineer.view_table', model_name=model_name, page=page_num) }}">{{ page_num }}</a></li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,32 +1,32 @@
 {% extends "base.html" %}
 
-{% block title %}Engineer Mode Auth{% endblock %}
+{% block title %}工程师模式接入{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center mt-5">
-    <div class="col-md-6 col-lg-4">
-        <div class="card shadow border-danger">
-            <div class="card-header bg-danger text-white">
-                <h4 class="card-title text-center mb-0">
-                    <i class="bi bi-tools me-2"></i>工程模式认证
-                </h4>
+<div class="row justify-content-center" style="min-height: 60vh; align-items: center;">
+    <div class="col-md-5 col-lg-4">
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-dark text-white text-center py-3">
+                <h4 class="mb-0"><i class="fas fa-terminal me-2"></i>ENGINEER MODE</h4>
             </div>
             <div class="card-body p-4 bg-light">
-                <div class="alert alert-warning small">
-                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                    此入口仅限技术运维人员使用，所有操作将被记录日志。
-                </div>
-                <form method="POST">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Access Key</label>
-                        <input type="password" name="access_key" class="form-control font-monospace" placeholder="Enter ENGINEER_ACCESS_KEY" required autofocus>
+                <form method="post">
+                    <div class="mb-4">
+                        <label for="password" class="form-label text-muted small text-uppercase fw-bold">Access Key</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-key text-danger"></i></span>
+                            <input type="password" class="form-control border-start-0 ps-0" id="password" name="password" placeholder="请输入 .env 配置的密钥" required autofocus>
+                        </div>
                     </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-danger">
-                            <i class="bi bi-shield-lock me-1"></i> Verify & Enter
-                        </button>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-dark btn-lg">UNLOCK SYSTEM</button>
                     </div>
                 </form>
+            </div>
+            <div class="card-footer text-center bg-white border-0 py-3">
+                <a href="{{ url_for('main.index') }}" class="text-decoration-none text-muted small">
+                    <i class="fas fa-arrow-left me-1"></i> 返回普通视图
+                </a>
             </div>
         </div>
     </div>

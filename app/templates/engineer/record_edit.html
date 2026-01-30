@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}编辑 {{ model_name }} [{{ item.id }}]{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow border-warning">
+            <div class="card-header bg-warning text-dark">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-edit me-2"></i>修改 {{ model_name }} (ID: {{ item.id }})</h5>
+                    <a href="{{ url_for('engineer.view_table', model_name=model_name) }}" class="btn btn-sm btn-dark">取消</a>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                    {% for column in columns %}
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ column.key }}" class="form-label small fw-bold text-muted">
+                                {{ column.key }}
+                                {% if column.primary_key %} <span class="badge bg-dark">PK</span>{% endif %}
+                                {% if column.foreign_keys %} <span class="badge bg-info text-dark">FK</span>{% endif %}
+                            </label>
+
+                            {% if column.primary_key %}
+                                <input type="text" class="form-control bg-light" id="{{ column.key }}" value="{{ item[column.key] }}" readonly>
+                            {% else %}
+                                <!-- 简易类型推断 -->
+                                {% if column.type.python_type.__name__ == 'bool' %}
+                                    <select class="form-select border-warning" name="{{ column.key }}">
+                                        <option value="True" {% if item[column.key] == True %}selected{% endif %}>True</option>
+                                        <option value="False" {% if item[column.key] == False %}selected{% endif %}>False</option>
+                                    </select>
+                                {% elif column.type.python_type.__name__ == 'datetime' %}
+                                    <input type="text" class="form-control border-warning" name="{{ column.key }}"
+                                           value="{{ item[column.key] }}" placeholder="YYYY-MM-DD HH:MM:SS">
+                                {% else %}
+                                    <input type="text" class="form-control border-warning" name="{{ column.key }}"
+                                           value="{{ item[column.key] if item[column.key] is not none else '' }}">
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-warning fw-bold">
+                            <i class="fas fa-save me-2"></i>强制保存修改
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
