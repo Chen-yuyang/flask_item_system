@@ -3,6 +3,10 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from app import db, models
 import inspect
 from datetime import datetime
+import os
+from sqlalchemy import text
+# 导入任务函数
+from app.tasks import update_reservation_status, check_overdue_records
 
 bp = Blueprint('engineer', __name__, url_prefix='/engineer')
 
@@ -22,12 +26,33 @@ def engineer_required(f):
 
 # --- 辅助函数：获取所有模型 ---
 def get_all_models():
+    """获取所有模型类，返回字典 {'Item': class Item, ...}"""
     model_list = {}
-    # 自动扫描 app.models 中的所有 SQLAlchemy 模型类
     for name, obj in inspect.getmembers(models):
         if inspect.isclass(obj) and hasattr(obj, '__tablename__'):
             model_list[name] = obj
     return model_list
+
+
+def get_model_by_name(name):
+    """
+    【核心修复】根据 URL 中的名称查找对应的 Model 类
+    解决 'items' 找不到 'Item' 模型的问题
+    """
+    # 1. 尝试直接通过映射表查找 (匹配前端硬编码的链接)
+    mapping = {
+        'items': models.Item,
+        'reservations': models.Reservation,
+        'records': models.Record,
+        'users': models.User,
+        'spaces': models.Space  # 【新增】添加空间表映射
+    }
+    if name in mapping:
+        return mapping[name]
+
+    # 2. 如果没找到，尝试通过类名查找 (兼容旧逻辑)
+    all_models = get_all_models()
+    return all_models.get(name)
 
 
 # --- 路由 ---
@@ -52,7 +77,6 @@ def login():
         else:
             flash('无效的访问密钥', 'danger')
 
-    # 使用独立的 layout，防止 base.html 报错
     return render_template('engineer/login.html')
 
 
@@ -66,16 +90,95 @@ def logout():
 @bp.route('/dashboard')
 @engineer_required
 def dashboard():
+    # 获取所有模型用于可能的动态展示
     models_map = get_all_models()
     tables = sorted(models_map.keys())
     return render_template('engineer/dashboard.html', tables=tables)
 
 
+# --- 【补回功能】SQL 控制台 ---
+@bp.route('/sql', methods=['POST'])
+@engineer_required
+def sql_console():
+    """只读 SQL 控制台"""
+    sql = request.form.get('sql', '').strip()
+    result = None
+    error = None
+
+    if sql:
+        # 安全检查：仅允许 SELECT 语句
+        if not sql.lower().startswith('select'):
+            error = "安全警告：工程模式仅允许执行 SELECT 查询语句！"
+        else:
+            try:
+                # 使用 SQLAlchemy 执行原生 SQL
+                with db.engine.connect() as conn:
+                    result_proxy = conn.execute(text(sql))
+                    keys = result_proxy.keys()
+                    data = result_proxy.fetchall()
+                    result = {'keys': keys, 'data': data}
+            except Exception as e:
+                error = f"SQL 执行错误: {str(e)}"
+
+    return render_template('engineer/dashboard.html', active_tab='sql', sql=sql, result=result, error=error)
+
+
+# --- 【补回功能】查看日志 ---
+@bp.route('/logs')
+@engineer_required
+def view_logs():
+    """实时日志查看器"""
+    log_path = current_app.config.get('LOG_FILE_PATH')
+    # 如果配置中没写，尝试默认路径
+    if not log_path:
+        log_path = os.path.join(os.getcwd(), 'logs', 'app.log')
+
+    lines = []
+
+    if log_path and os.path.exists(log_path):
+        try:
+            # 使用 utf-8 读取，并忽略错误
+            with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
+                all_lines = f.readlines()
+            lines = all_lines[-200:]  # 读取最后 200 行
+            lines.reverse()
+        except Exception as e:
+            lines = [f"读取日志失败: {str(e)}"]
+    else:
+        lines = [f"日志文件不存在: {log_path or '未配置路径'}"]
+
+    return render_template('engineer/dashboard.html', active_tab='logs', logs=lines)
+
+
+# --- 【补回功能】手动触发任务 ---
+@bp.route('/trigger/<task_name>', methods=['POST'])
+@engineer_required
+def trigger_task(task_name):
+    """手动触发后台任务"""
+    try:
+        if task_name == 'update_reservation_status':
+            update_reservation_status()
+            flash('任务 [预约状态流转] 已手动触发执行', 'success')
+        elif task_name == 'check_overdue':
+            check_overdue_records()
+            flash('任务 [逾期检查] 已手动触发执行', 'success')
+        else:
+            flash(f'未知任务: {task_name}', 'warning')
+    except Exception as e:
+        flash(f'任务执行异常: {str(e)}', 'danger')
+        current_app.logger.error(f"手动触发任务失败: {e}")
+
+    return redirect(url_for('engineer.dashboard'))
+
+
+# --- 数据表管理 ---
+
+# 【修复】函数名改回 view_table，参数改为 model_name 以匹配 table_view.html
 @bp.route('/table/<model_name>')
 @engineer_required
 def view_table(model_name):
-    models_map = get_all_models()
-    model = models_map.get(model_name)
+    # 【修复】使用 get_model_by_name 处理 'items' -> Item 的映射
+    model = get_model_by_name(model_name)
 
     if not model:
         flash(f'模型 {model_name} 不存在', 'danger')
@@ -93,7 +196,7 @@ def view_table(model_name):
     columns = [c.key for c in model.__table__.columns]
 
     return render_template('engineer/table_view.html',
-                           model_name=model_name,
+                           model_name=model_name,  # 传回 model_name 给模板用
                            columns=columns,
                            items=items,
                            pagination=pagination)
@@ -102,8 +205,8 @@ def view_table(model_name):
 @bp.route('/table/<model_name>/edit/<int:id>', methods=['GET', 'POST'])
 @engineer_required
 def edit_record(model_name, id):
-    models_map = get_all_models()
-    model = models_map.get(model_name)
+    # 【修复】使用 get_model_by_name
+    model = get_model_by_name(model_name)
 
     if not model:
         flash(f'模型 {model_name} 不存在', 'danger')
@@ -115,18 +218,14 @@ def edit_record(model_name, id):
     if request.method == 'POST':
         try:
             for column in columns:
-                # 1. 跳过主键修改
                 if column.primary_key:
                     continue
 
-                # 2. 获取表单数据
                 value = request.form.get(column.key)
 
-                # 3. 处理空值 (空字符串且列允许为空)
                 if value == '' and column.nullable:
                     value = None
 
-                # 4. 类型转换逻辑
                 if value is not None:
                     python_type = column.type.python_type
                     try:
@@ -147,23 +246,19 @@ def edit_record(model_name, id):
                                     try:
                                         value = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
                                     except ValueError:
-                                        # 如果日期格式都不匹配，保持原样，可能会在commit时报错
                                         pass
                     except (ValueError, TypeError):
-                        # 如果类型转换失败，打印日志并跳过，防止整个请求崩溃
                         print(f"转换字段 {column.key} 失败: {value}")
                         continue
 
-                # 5. 安全赋值 (修复 property has no setter 错误)
                 try:
                     setattr(item, column.key, value)
                 except AttributeError:
-                    # 如果该属性是只读的（比如定义了 @property 但没有 setter），则跳过
-                    print(f"跳过只读属性: {column.key}")
                     continue
 
             db.session.commit()
             flash(f'{model_name} [ID:{id}] 更新成功', 'success')
+            # 【修复】重定向使用 model_name 和 view_table
             return redirect(url_for('engineer.view_table', model_name=model_name))
         except Exception as e:
             db.session.rollback()
@@ -178,8 +273,8 @@ def edit_record(model_name, id):
 @bp.route('/table/<model_name>/delete/<int:id>', methods=['POST'])
 @engineer_required
 def delete_record(model_name, id):
-    models_map = get_all_models()
-    model = models_map.get(model_name)
+    # 【修复】使用 get_model_by_name
+    model = get_model_by_name(model_name)
 
     if not model:
         flash(f'模型 {model_name} 不存在', 'danger')
@@ -194,4 +289,5 @@ def delete_record(model_name, id):
         db.session.rollback()
         flash(f'删除失败: {str(e)}', 'danger')
 
+    # 【修复】重定向使用 model_name 和 view_table
     return redirect(url_for('engineer.view_table', model_name=model_name))

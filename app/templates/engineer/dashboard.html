@@ -1,67 +1,226 @@
 {% extends "base.html" %}
 
-{% block title %}工程师控制台{% endblock %}
+{% block title %}工程模式控制台{% endblock %}
 
 {% block content %}
-<div class="row mb-4 align-items-center">
-    <div class="col">
-        <h2 class="text-danger"><i class="fas fa-user-secret me-2"></i>工程师控制台</h2>
-        <p class="text-muted mb-0">Current Status: <strong>God Mode Active</strong> | Session-based Authentication</p>
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="display-6"><i class="bi bi-cpu"></i> 工程模式控制台</h1>
+            <p class="text-muted">这是开发人员和管理员的专用后台，用于维护数据和调试系统。</p>
+        </div>
+        <div class="col-md-4 text-end align-self-center">
+            <a href="{{ url_for('engineer.logout') }}" class="btn btn-outline-danger">
+                <i class="bi bi-box-arrow-right"></i> 退出工程模式
+            </a>
+        </div>
     </div>
-    <div class="col-auto">
-        <a href="{{ url_for('engineer.logout') }}" class="btn btn-outline-danger">
-            <i class="fas fa-sign-out-alt me-1"></i>退出模式
-        </a>
-    </div>
-</div>
 
-<div class="row">
-    <!-- 数据库全能管理板块 -->
-    <div class="col-md-12">
-        <div class="card shadow border-danger">
-            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-database me-2"></i>全局数据管理 (Global Data Access)</h5>
-                <span class="badge bg-white text-danger">Direct DB Access</span>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-warning border-warning">
-                    <i class="fas fa-radiation me-2"></i>
-                    <strong>高危操作区：</strong> 您拥有对所有数据表的读写权限。修改不经过业务逻辑验证，请谨慎操作。
+    <!-- 导航标签 -->
+    <ul class="nav nav-tabs mb-4" id="engineerTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if not active_tab or active_tab == 'overview' %}active{% endif %}"
+                    id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                <i class="bi bi-speedometer2"></i> 系统概览 & 任务
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'tables' %}active{% endif %}"
+                    id="tables-tab" data-bs-toggle="tab" data-bs-target="#tables" type="button" role="tab">
+                <i class="bi bi-table"></i> 数据表管理
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'sql' %}active{% endif %}"
+                    id="sql-tab" data-bs-toggle="tab" data-bs-target="#sql" type="button" role="tab">
+                <i class="bi bi-terminal"></i> SQL 控制台
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'logs' %}active{% endif %}"
+                    id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs" type="button" role="tab">
+                <i class="bi bi-file-earmark-text"></i> 系统日志
+            </button>
+        </li>
+    </ul>
+
+    <!-- 标签页内容 -->
+    <div class="tab-content" id="engineerTabsContent">
+
+        <!-- 1. 系统概览 & 任务触发 -->
+        <div class="tab-pane fade {% if not active_tab or active_tab == 'overview' %}show active{% endif %}" id="overview" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <i class="bi bi-lightning-charge"></i> 手动触发后台任务
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text text-muted">部分任务通常由定时器自动执行，但在测试或紧急情况下可手动触发。</p>
+
+                            <div class="d-grid gap-2">
+                                <form action="{{ url_for('engineer.trigger_task', task_name='update_reservation_status') }}" method="POST">
+                                    <button type="submit" class="btn btn-outline-primary w-100 text-start mb-2">
+                                        <i class="bi bi-clock-history me-2"></i> 刷新预约状态流转
+                                        <small class="d-block text-muted ms-4">检查并更新过期或生效的预约状态</small>
+                                    </button>
+                                </form>
+
+                                <form action="{{ url_for('engineer.trigger_task', task_name='check_overdue') }}" method="POST">
+                                    <button type="submit" class="btn btn-outline-warning w-100 text-start">
+                                        <i class="bi bi-exclamation-triangle me-2"></i> 检查逾期记录 & 发送邮件
+                                        <small class="d-block text-muted ms-4">扫描逾期未还物品并发送提醒邮件</small>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <h6 class="card-subtitle mb-3 text-muted">检测到以下数据模型：</h6>
-                <div class="row g-3">
-                    {% for table in tables %}
-                    <div class="col-6 col-md-4 col-lg-3">
-                        <a href="{{ url_for('engineer.view_table', model_name=table) }}" class="text-decoration-none">
-                            <div class="card h-100 border-secondary engineer-card">
-                                <div class="card-body text-center d-flex flex-column justify-content-center">
-                                    <div class="mb-2"><i class="fas fa-table fa-2x text-secondary"></i></div>
-                                    <h6 class="card-title text-dark mb-0 fw-bold">{{ table }}</h6>
-                                </div>
-                            </div>
-                        </a>
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-secondary">
+                        <div class="card-header bg-secondary text-white">
+                            <i class="bi bi-info-circle"></i> 环境信息
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Flask 环境
+                                    <span class="badge bg-secondary rounded-pill">{{ config['ENV'] }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    调试模式 (Debug)
+                                    <span class="badge bg-{{ 'danger' if config['DEBUG'] else 'success' }} rounded-pill">
+                                        {{ config['DEBUG'] }}
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    数据库 URI
+                                    <small class="text-muted text-truncate" style="max-width: 200px;" title="{{ config['SQLALCHEMY_DATABASE_URI'] }}">
+                                        {{ config['SQLALCHEMY_DATABASE_URI'] }}
+                                    </small>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
-                    {% endfor %}
                 </div>
             </div>
         </div>
+
+        <!-- 2. 数据表管理 -->
+        <div class="tab-pane fade {% if active_tab == 'tables' %}show active{% endif %}" id="tables" role="tabpanel">
+            <div class="card mb-4">
+                <div class="card-header">选择要管理的数据表</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- 【修改】链接改用 view_table 和 model_name -->
+                        <div class="col-md-3">
+                            <a href="{{ url_for('engineer.view_table', model_name='items') }}" class="btn btn-outline-dark w-100 py-3">
+                                <i class="bi bi-box mb-2 fs-3 d-block"></i> 物品表 (Items)
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('engineer.view_table', model_name='reservations') }}" class="btn btn-outline-dark w-100 py-3">
+                                <i class="bi bi-calendar-check mb-2 fs-3 d-block"></i> 预约表 (Reservations)
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('engineer.view_table', model_name='records') }}" class="btn btn-outline-dark w-100 py-3">
+                                <i class="bi bi-file-earmark-spreadsheet mb-2 fs-3 d-block"></i> 记录表 (Records)
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('engineer.view_table', model_name='users') }}" class="btn btn-outline-dark w-100 py-3">
+                                <i class="bi bi-people mb-2 fs-3 d-block"></i> 用户表 (Users)
+                            </a>
+                        </div>
+                        <!-- 【新增】空间表入口 -->
+                        <div class="col-md-3">
+                            <a href="{{ url_for('engineer.view_table', model_name='spaces') }}" class="btn btn-outline-dark w-100 py-3">
+                                <i class="bi bi-geo-alt mb-2 fs-3 d-block"></i> 空间表 (Spaces)
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. SQL 控制台 -->
+        <div class="tab-pane fade {% if active_tab == 'sql' %}show active{% endif %}" id="sql" role="tabpanel">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <i class="bi bi-exclamation-triangle-fill"></i> 只读 SQL 执行器
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('engineer.sql_console') }}">
+                        <div class="mb-3">
+                            <label for="sqlInput" class="form-label">输入 SQL 语句 (仅限 SELECT):</label>
+                            <textarea class="form-control font-monospace" id="sqlInput" name="sql" rows="4"
+                                      placeholder="SELECT * FROM items LIMIT 5;">{{ sql }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">执行查询</button>
+                    </form>
+
+                    {% if error %}
+                    <div class="alert alert-danger mt-3">
+                        <i class="bi bi-x-circle"></i> {{ error }}
+                    </div>
+                    {% endif %}
+
+                    {% if result %}
+                    <div class="mt-4">
+                        <h5>查询结果 ({{ result.data|length }} 行)</h5>
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-sm table-striped table-hover table-bordered">
+                                <thead class="table-dark" style="position: sticky; top: 0;">
+                                    <tr>
+                                        {% for key in result.keys %}
+                                        <th>{{ key }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in result.data %}
+                                    <tr>
+                                        {% for cell in row %}
+                                        <td class="text-truncate" style="max-width: 200px;">{{ cell }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. 系统日志 -->
+        <div class="tab-pane fade {% if active_tab == 'logs' %}show active{% endif %}" id="logs" role="tabpanel">
+            <div class="card bg-dark text-white">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-file-code"></i> 系统运行日志 (最后 200 行)</span>
+                    <a href="{{ url_for('engineer.view_logs') }}" class="btn btn-sm btn-outline-light">
+                        <i class="bi bi-arrow-clockwise"></i> 刷新
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="p-3 font-monospace" style="height: 500px; overflow-y: scroll; background-color: #1e1e1e; font-size: 0.85rem;">
+                        {% if logs %}
+                            {% for line in logs %}
+                                <div class="text-nowrap border-bottom border-secondary py-1" style="color: #d4d4d4;">
+                                    {{ line }}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center mt-5">点击刷新加载日志...</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
-
-<style>
-    .engineer-card {
-        transition: all 0.2s ease;
-        background-color: #f8f9fa;
-    }
-    .engineer-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        background-color: #fff;
-        border-color: #dc3545 !important;
-    }
-    .engineer-card:hover i, .engineer-card:hover h6 {
-        color: #dc3545 !important;
-    }
-</style>
 {% endblock %}
