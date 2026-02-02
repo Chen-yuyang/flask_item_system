@@ -43,9 +43,6 @@ def all_items():
 
     # 使用 paginate
     pagination = items_query.paginate(page=page, per_page=per_page, error_out=False)
-    # 【修复】：这里不要把 items 赋值为列表，因为模板里 items 既被当做列表迭代，也被当做 pagination 对象使用
-    # 为了兼容您的模板 items.pages, items.has_prev 等用法，我们需要传递 pagination 对象给模板的 items 变量
-    # 或者修改模板。鉴于您的要求是不改风格，我们传递 pagination 给 items 变量（因为 pagination 对象也是可迭代的）
 
     return render_template('items/all_items.html', items=pagination, pagination=pagination)
 
@@ -107,10 +104,19 @@ def create(space_id):
     form = ItemForm()
     form.space_id.data = space_id
 
+    # 如果是GET请求且没有数据，默认显示'-' (虽然Field有default，但这里确保显示逻辑)
+    if request.method == 'GET' and not form.serial_number.data:
+        form.serial_number.data = '-'
+
     if form.validate_on_submit():
+        # 处理编号逻辑：如果为空，强制设为 '-'
+        sn = form.serial_number.data
+        if not sn or not sn.strip():
+            sn = '-'
+
         item = Item(
             name=form.name.data,
-            serial_number=form.serial_number.data,
+            serial_number=sn,
             function=form.function.data,
             status='available',
             space_id=space_id,
@@ -146,7 +152,13 @@ def edit(id):
 
     if form.validate_on_submit():
         item.name = form.name.data
-        item.serial_number = form.serial_number.data
+
+        # 处理编号逻辑：如果为空，强制设为 '-'
+        sn = form.serial_number.data
+        if not sn or not sn.strip():
+            sn = '-'
+        item.serial_number = sn
+
         item.function = form.function.data
         item.status = form.status.data
         item.space_id = form.space_id.data

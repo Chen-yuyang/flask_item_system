@@ -11,10 +11,13 @@ class ItemForm(FlaskForm):
     name = StringField('物品名称', validators=[
         DataRequired(), Length(min=1, max=100)
     ])
+
+    # 修改：移除 DataRequired，添加 Optional，设置默认值为 '-'
     serial_number = StringField('物品编号', validators=[
-        DataRequired(), Length(min=1, max=50)
-    ])
-    function = TextAreaField('功能描述',validators=[DataRequired()])
+        Optional(), Length(max=50)
+    ], default='-')
+
+    function = TextAreaField('功能描述', validators=[DataRequired()])
     status = SelectField('状态', choices=[
         ('available', '可用'),
         ('borrowed', '正在使用'),
@@ -29,6 +32,11 @@ class ItemForm(FlaskForm):
         self.item_id = item_id
 
     def validate_serial_number(self, serial_number):
+        # 修改：如果是默认值 '-' 或者为空，则跳过唯一性检查
+        if not serial_number.data or serial_number.data.strip() == '' or serial_number.data == '-':
+            return
+
+        # 仅当有具体编号时，才检查唯一性
         item = Item.query.filter_by(serial_number=serial_number.data).first()
         if item is not None and item.id != self.item_id:
             raise ValidationError('该编号已被使用，请使用其他编号')

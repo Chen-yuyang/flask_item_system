@@ -27,14 +27,3 @@ def update_database():
 
 if __name__ == "__main__":
     update_database()
-# ```
-
-### 3. 如何执行
-#
-# 1.
-# 保存上述两个文件。
-# 2.
-# 在终端（Terminal）运行以下命令：
-# ```bash
-# python
-# db_update_script.py

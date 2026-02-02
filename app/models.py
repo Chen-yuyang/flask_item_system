@@ -156,7 +156,11 @@ class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     function = db.Column(db.Text)
-    serial_number = db.Column(db.String(50), unique=True)
+
+    # 【修改】：移除了 unique=True，允许 '-' 值重复。
+    # 我们在 Form 表单中通过逻辑代码来控制非 '-' 值的唯一性。
+    serial_number = db.Column(db.String(50))
+
     status = db.Column(db.String(20), default='available')  # available, borrowed, reserved
     barcode_path = db.Column(db.String(255))
     space_id = db.Column(db.Integer, db.ForeignKey('space.id'), nullable=False)
