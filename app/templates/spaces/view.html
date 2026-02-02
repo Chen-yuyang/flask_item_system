@@ -252,7 +252,9 @@
     </form>
 
     <div class="mt-4 d-flex justify-content-center">
-        {{ macros.render_pagination(pagination, 'items.all_items', query=request.args.get('query'), status=request.args.get('status')) }}
+        {# 【修改】: 修复分页链接。之前的 'items.all_items' 会导致跳转到全部物品列表。 #}
+        {# 这里改为 'spaces.view' 并传入当前空间的 id #}
+        {{ macros.render_pagination(pagination, 'spaces.view', id=space.id) }}
     </div>
 
     {% else %}
