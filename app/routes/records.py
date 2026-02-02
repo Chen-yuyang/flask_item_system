@@ -245,11 +245,17 @@ def delete(record_id):
     # 3. 记录删除信息（用于日志或提示，可选）
     item_name = record.item.name
 
+    # 【修改】：如果该记录是“使用中”，则在删除前释放物品
+    reset_msg = ""
+    if record.status == 'using':
+        record.item.status = 'available'
+        reset_msg = "，同时物品状态已重置为“可用”"
+
     # 4. 执行删除操作
     db.session.delete(record)
     db.session.commit()
 
-    flash(f'成功删除物品「{item_name}」的使用记录', 'success')
+    flash(f'成功删除物品「{item_name}」的使用记录{reset_msg}', 'success')
 
     # 关键改动：重定向到“所有记录”页面，并将当前的筛选状态传递回去
     return redirect(url_for(
