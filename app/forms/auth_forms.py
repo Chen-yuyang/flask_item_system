@@ -84,3 +84,31 @@ class AddEmailForm(FlaskForm):
 # 【新增】: 用于修改密码页面（发送邮件）的简单表单，主要用于CSRF保护
 class ChangePasswordEmailForm(FlaskForm):
     submit = SubmitField('发送重置密码邮件')
+
+
+# 【新增】：管理员编辑用户信息表单
+class AdminEditUserForm(FlaskForm):
+    username = StringField('用户名', validators=[
+        DataRequired(), Length(min=2, max=32)
+    ])
+    email = StringField('邮箱', validators=[
+        Optional(), Email()
+    ])
+    submit = SubmitField('保存更改')
+
+    def __init__(self, original_username, original_email, *args, **kwargs):
+        super(AdminEditUserForm, self).__init__(*args, **kwargs)
+        self.original_username = original_username
+        self.original_email = original_email
+
+    def validate_username(self, username):
+        if username.data != self.original_username:
+            user = User.query.filter_by(username=username.data).first()
+            if user is not None:
+                raise ValidationError('该用户名已被占用')
+
+    def validate_email(self, email):
+        if email.data and email.data != self.original_email:
+            user = User.query.filter_by(email=email.data).first()
+            if user is not None:
+                raise ValidationError('该邮箱已被占用')

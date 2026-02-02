@@ -31,7 +31,7 @@
                             <th scope="col">邮箱状态</th>
                             <th scope="col">注册时间</th>
                             <th scope="col">当前身份</th>
-                            <th scope="col" class="text-end pe-4">权限操作</th>
+                            <th scope="col" class="text-end pe-4">操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -68,15 +68,34 @@
                                 {% if user.is_super_admin() %}
                                     <button class="btn btn-sm btn-outline-secondary" disabled><i class="bi bi-slash-circle"></i> 不可操作</button>
                                 {% else %}
-                                    {% if user.role == 'admin' %}
-                                        <form action="{{ url_for('admin.demote_admin', user_id=user.id) }}" method="post" class="d-inline" onsubmit="return confirm('确定要撤销 {{ user.username }} 的管理员权限吗？');">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-arrow-down-circle me-1"></i>降级</button>
+                                    <div class="btn-group">
+                                        {# 编辑按钮 #}
+                                        <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-primary" title="编辑信息">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </a>
+
+                                        {# 权限提升/降级按钮 #}
+                                        {% if user.role == 'admin' %}
+                                            <form action="{{ url_for('admin.demote_admin', user_id=user.id) }}" method="post" class="d-inline" onsubmit="return confirm('确定要撤销 {{ user.username }} 的管理员权限吗？');">
+                                                <button type="submit" class="btn btn-sm btn-outline-warning text-dark" title="降级为普通用户">
+                                                    <i class="bi bi-arrow-down-circle"></i>
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            <form action="{{ url_for('admin.promote_admin', user_id=user.id) }}" method="post" class="d-inline" onsubmit="return confirm('确定要将 {{ user.username }} 提升为管理员吗？');">
+                                                <button type="submit" class="btn btn-sm btn-outline-success" title="提升为管理员">
+                                                    <i class="bi bi-arrow-up-circle"></i>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+
+                                        {# 删除按钮 #}
+                                        <form action="{{ url_for('admin.delete_user', user_id=user.id) }}" method="post" class="d-inline" onsubmit="return confirm('警告：确定要永久删除用户 {{ user.username }} 吗？\n\n此操作不可恢复，该用户创建的物品和记录将失去关联。');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="删除用户">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
                                         </form>
-                                    {% else %}
-                                        <form action="{{ url_for('admin.promote_admin', user_id=user.id) }}" method="post" class="d-inline" onsubmit="return confirm('确定要将 {{ user.username }} 提升为管理员吗？');">
-                                            <button type="submit" class="btn btn-sm btn-success text-white"><i class="bi bi-arrow-up-circle me-1"></i>提升</button>
-                                        </form>
-                                    {% endif %}
+                                    </div>
                                 {% endif %}
                             </td>
                         </tr>

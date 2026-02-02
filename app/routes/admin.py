@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import User
 from app.utils import super_admin_required
+from app.forms.auth_forms import AdminEditUserForm
 
 # 此蓝图用于处理“系统级”管理功能
 # 普通的物品管理在 items.py，空间管理在 spaces.py
@@ -70,4 +71,65 @@ def demote_admin(user_id):
         db.session.commit()
         flash(f'已撤销用户 {user.username} 的管理员权限', 'warning')
 
+    return redirect(url_for('admin.user_management'))
+
+
+@bp.route('/users/edit/<int:user_id>', methods=['GET', 'POST'])
+@login_required
+@super_admin_required
+def edit_user(user_id):
+    """
+    【新增】超级管理员修改用户信息
+    """
+    user = User.query.get_or_404(user_id)
+
+    # 禁止修改其他超级管理员的信息（防止误操作，或根据需求自行调整）
+    if user.is_super_admin() and user.id != current_user.id:
+        flash('无法修改其他超级管理员的信息', 'warning')
+        return redirect(url_for('admin.user_management'))
+
+    form = AdminEditUserForm(original_username=user.username, original_email=user.email, obj=user)
+
+    if form.validate_on_submit():
+        # 【修改点】：检查邮箱是否发生了变化
+        if user.email != form.email.data:
+            user.email = form.email.data
+            # 如果邮箱变了，强制重置验证状态为 False
+            user.email_verified = False
+            flash(f'检测到邮箱变更，用户 {user.username} 的邮箱验证状态已重置为“未验证”。', 'warning')
+
+        user.username = form.username.data
+
+        db.session.commit()
+        flash(f'用户 {user.username} 的信息已更新', 'success')
+        return redirect(url_for('admin.user_management'))
+
+    return render_template('auth/admin_edit_user.html', form=form, user=user)
+
+
+@bp.route('/users/delete/<int:user_id>', methods=['POST'])
+@login_required
+@super_admin_required
+def delete_user(user_id):
+    """
+    【新增】超级管理员删除用户
+    """
+    user = User.query.get_or_404(user_id)
+
+    if user.is_super_admin():
+        flash('严重错误：无法删除超级管理员账号', 'danger')
+        return redirect(url_for('admin.user_management'))
+
+    if user.id == current_user.id:
+        flash('无法删除自己', 'warning')
+        return redirect(url_for('admin.user_management'))
+
+    # 记录用户名用于提示
+    username = user.username
+
+    # 执行删除 (数据库外键设置为 Set Null 或 SQLAlchemy 默认行为会处理关联)
+    db.session.delete(user)
+    db.session.commit()
+
+    flash(f'用户 {username} 已被永久删除', 'success')
     return redirect(url_for('admin.user_management'))
