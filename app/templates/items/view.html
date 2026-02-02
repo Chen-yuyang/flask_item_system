@@ -37,7 +37,7 @@
                         'success' if item.status == 'available' else
                         'warning' if item.status == 'reserved' else 'danger'
                     }}">
-                        {{ item.status|replace('available', '可用')|replace('reserved', '已预约')|replace('borrowed', '已借出') }}
+                        {{ item.status|replace('available', '可用')|replace('reserved', '已预约')|replace('borrowed', '正在使用') }}
                     </span>
                 </div>
 
@@ -79,7 +79,7 @@
                     {% else %}
                     <button class="btn btn-light text-muted flex-grow-1" disabled>
                         <i class="bi bi-slash-circle me-1"></i>
-                        {% if item.status == 'reserved' %}被他人预约{% elif item.status == 'borrowed' %}已借出{% else %}暂不可用{% endif %}
+                        {% if item.status == 'reserved' %}被他人预约{% elif item.status == 'borrowed' %}正在使用{% else %}暂不可用{% endif %}
                     </button>
                     {% endif %}
 

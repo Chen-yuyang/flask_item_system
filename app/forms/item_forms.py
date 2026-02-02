@@ -17,7 +17,7 @@ class ItemForm(FlaskForm):
     function = TextAreaField('功能描述',validators=[DataRequired()])
     status = SelectField('状态', choices=[
         ('available', '可用'),
-        ('borrowed', '已借出'),
+        ('borrowed', '正在使用'),
         ('reserved', '已预约')
     ], validators=[Optional()])
     space_id = SelectField('所属空间', coerce=int, validators=[DataRequired()])

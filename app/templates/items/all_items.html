@@ -33,7 +33,7 @@
                     <select class="form-select border-start-0 ps-0" name="status">
                         <option value="">所有状态</option>
                         <option value="available" {% if request.args.get('status') == 'available' %}selected{% endif %}>可用</option>
-                        <option value="borrowed" {% if request.args.get('status') == 'borrowed' %}selected{% endif %}>已借出</option>
+                        <option value="borrowed" {% if request.args.get('status') == 'borrowed' %}selected{% endif %}>正在使用</option>
                         <option value="reserved" {% if request.args.get('status') == 'reserved' %}selected{% endif %}>已预约</option>
                     </select>
                 </div>
@@ -116,7 +116,7 @@
                             {% if item.status == 'available' %}
                                 <span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success border-opacity-10 px-3 py-2">可用</span>
                             {% elif item.status == 'borrowed' %}
-                                <span class="badge rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-10 px-3 py-2">已借出</span>
+                                <span class="badge rounded-pill bg-danger bg-opacity-10 text-danger border border-danger border-opacity-10 px-3 py-2">正在使用</span>
                             {% elif item.status == 'reserved' %}
                                 <span class="badge rounded-pill bg-warning bg-opacity-10 text-warning border border-warning border-opacity-10 px-3 py-2">已预约</span>
                             {% else %}

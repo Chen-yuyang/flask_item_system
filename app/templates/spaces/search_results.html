@@ -38,7 +38,7 @@
                         'success' if item.status == 'available' else
                         'warning' if item.status == 'reserved' else 'danger'
                     }}">
-                        {{ item.status|replace('available', '可用')|replace('reserved', '已预约')|replace('borrowed', '已借出') }}
+                        {{ item.status|replace('available', '可用')|replace('reserved', '已预约')|replace('borrowed', '正在使用') }}
                     </span>
                 </td>
                 <td>
