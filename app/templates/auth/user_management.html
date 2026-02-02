@@ -5,29 +5,16 @@
 {% block content %}
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>
-            <i class="bi bi-people-fill text-primary"></i> 用户权限管理
-        </h2>
-        <span class="badge bg-danger p-2">
-            <i class="bi bi-shield-lock-fill me-1"></i>Super Admin 专区
-        </span>
+        <h2><i class="bi bi-people-fill text-primary"></i> 用户权限管理</h2>
+        <span class="badge bg-danger p-2"><i class="bi bi-shield-lock-fill me-1"></i>Super Admin 专区</span>
     </div>
 
     <div class="alert alert-light border shadow-sm mb-4">
         <h5 class="alert-heading"><i class="bi bi-info-circle text-info"></i> 权限体系说明：</h5>
         <ul class="mb-0 ps-3">
-            <li class="mb-1">
-                <span class="badge bg-danger me-2">Root (Super Admin)</span>
-                系统最高权限，由配置文件 <code>FLASKY_ADMIN</code> 决定，<strong>不可更改/不可降级</strong>。
-            </li>
-            <li class="mb-1">
-                <span class="badge bg-warning text-dark me-2">Admin</span>
-                普通管理员，由 Root 任命，拥有空间/物品管理、借还审批权限。
-            </li>
-            <li>
-                <span class="badge bg-secondary me-2">User</span>
-                普通用户，仅拥有借用、预约、查看权限。
-            </li>
+            <li class="mb-1"><span class="badge bg-danger me-2">Root</span>系统最高权限，由配置文件决定。</li>
+            <li class="mb-1"><span class="badge bg-warning text-dark me-2">Admin</span>普通管理员，拥有空间/物品管理权限。</li>
+            <li><span class="badge bg-secondary me-2">User</span>普通用户，仅拥有借用、预约权限。</li>
         </ul>
     </div>
 
@@ -40,7 +27,10 @@
                             <th scope="col" class="ps-4" style="width: 80px;">序号</th>
                             <th scope="col">用户名</th>
                             <th scope="col">邮箱</th>
-                            <th scope="col">注册时间</th> <th scope="col">当前身份</th>
+                            <!-- 【修改】：新增邮箱验证状态列 -->
+                            <th scope="col">邮箱状态</th>
+                            <th scope="col">注册时间</th>
+                            <th scope="col">当前身份</th>
                             <th scope="col" class="text-end pe-4">权限操作</th>
                         </tr>
                     </thead>
@@ -48,16 +38,23 @@
                     {% for user in users.items %}
                         <tr class="{{ 'table-warning' if user.is_super_admin() else '' }}">
                             <td class="ps-4">{{ loop.index + (users.page - 1) * users.per_page }}</td>
+                            <td><strong>{{ user.username }}</strong></td>
+                            <td>{{ user.email or '-' }}</td>
 
+                            <!-- 【修改】：显示验证状态徽章 -->
                             <td>
-                                <strong>{{ user.username }}</strong>
+                                {% if user.email %}
+                                    {% if user.email_verified %}
+                                        <span class="badge bg-success rounded-pill"><i class="bi bi-check-lg"></i> 已验证</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary rounded-pill">未验证</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted small">无邮箱</span>
+                                {% endif %}
                             </td>
-                            <td>{{ user.email }}</td>
 
-                            <td>
-                                {{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else '-' }}
-                            </td>
-
+                            <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else '-' }}</td>
                             <td>
                                 {% if user.is_super_admin() %}
                                     <span class="badge bg-danger rounded-pill">Root</span>
@@ -69,21 +66,15 @@
                             </td>
                             <td class="text-end pe-4">
                                 {% if user.is_super_admin() %}
-                                    <button class="btn btn-sm btn-outline-secondary" disabled title="超级管理员权限不可更改">
-                                        <i class="bi bi-slash-circle"></i> 不可操作
-                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" disabled><i class="bi bi-slash-circle"></i> 不可操作</button>
                                 {% else %}
                                     {% if user.role == 'admin' %}
                                         <form action="{{ url_for('admin.demote_admin', user_id=user.id) }}" method="post" class="d-inline" onsubmit="return confirm('确定要撤销 {{ user.username }} 的管理员权限吗？');">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                <i class="bi bi-arrow-down-circle me-1"></i>降级为用户
-                                            </button>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-arrow-down-circle me-1"></i>降级</button>
                                         </form>
                                     {% else %}
                                         <form action="{{ url_for('admin.promote_admin', user_id=user.id) }}" method="post" class="d-inline" onsubmit="return confirm('确定要将 {{ user.username }} 提升为管理员吗？');">
-                                            <button type="submit" class="btn btn-sm btn-success text-white">
-                                                <i class="bi bi-arrow-up-circle me-1"></i>提升为管理
-                                            </button>
+                                            <button type="submit" class="btn btn-sm btn-success text-white"><i class="bi bi-arrow-up-circle me-1"></i>提升</button>
                                         </form>
                                     {% endif %}
                                 {% endif %}
@@ -94,7 +85,6 @@
                 </table>
             </div>
         </div>
-
         {% if users.pages > 1 %}
         <div class="card-footer bg-white border-0 py-3">
             <nav aria-label="Page navigation">

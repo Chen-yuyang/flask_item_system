@@ -14,9 +14,12 @@ LOCAL_TIMEZONE = pytz.timezone('Asia/Shanghai')
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    # 修改：邮箱设为可为空，支持无邮箱注册
+    email = db.Column(db.String(120), unique=True, nullable=True)
     password_hash = db.Column(db.String(128))
     role = db.Column(db.String(10), default='user')  # 数据库角色：'user' 或 'admin'
+    # 新增：邮箱验证状态
+    email_verified = db.Column(db.Boolean, default=False)
 
     # 数据库存储UTC时间（字段名加前缀_utc，实际数据库列名仍为created_at）
     _utc_created_at = db.Column('created_at', db.DateTime, default=datetime.utcnow)
@@ -47,6 +50,21 @@ class User(UserMixin, db.Model):
             return None
         return cls.query.get(data['user_id'])
 
+    # 新增：生成邮箱验证 Token (保持与重置密码一致的风格)
+    def get_email_verification_token(self, expires_in=1800):
+        s = Serializer(current_app.config['SECRET_KEY'])
+        return s.dumps({'user_id': self.id})
+
+    # 新增：验证邮箱 Token
+    @classmethod
+    def verify_email_token(cls, token, max_age=1800):
+        s = Serializer(current_app.config['SECRET_KEY'])
+        try:
+            data = s.loads(token, max_age=max_age)
+        except:
+            return None
+        return cls.query.get(data['user_id'])
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -60,6 +78,10 @@ class User(UserMixin, db.Model):
         判断是否为超级管理员 (Root)
         依据：邮箱是否包含在 FLASKY_ADMIN 配置列表中
         """
+        # 如果用户没有邮箱，自然不可能是超级管理员
+        if not self.email:
+            return False
+
         admin_emails_config = current_app.config.get('FLASKY_ADMIN')
 
         if not admin_emails_config:

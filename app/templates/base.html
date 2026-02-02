@@ -12,9 +12,8 @@
         body {
             background-color: #f4f6f9;
             color: #333;
-            transition: all 0.3s ease; /* 添加过渡效果 */
+            transition: all 0.3s ease;
         }
-
         .sidebar {
             height: calc(100vh - 56px);
             position: sticky;
@@ -24,52 +23,21 @@
             border-right: 1px solid #dee2e6;
             box-shadow: 2px 0 5px rgba(0,0,0,0.02);
             z-index: 100;
-            transition: all 0.3s ease; /* 侧边栏过渡 */
+            transition: all 0.3s ease;
         }
-
-        /* 侧边栏层级缩进样式 */
         .space-level-0 { padding-left: 10px; }
         .space-level-1 { padding-left: 30px; }
         .space-level-2 { padding-left: 50px; }
-
         .navbar-brand { font-weight: bold; }
-        .content {
-            padding: 20px;
-            transition: all 0.3s ease; /* 内容区域过渡 */
-        }
+        .content { padding: 20px; transition: all 0.3s ease; }
         .flash-message { margin-top: 10px; }
-
-        .sidebar .nav-link {
-            color: #495057;
-            border-radius: 4px;
-            margin-bottom: 2px;
-        }
-        .sidebar .nav-link:hover {
-            background-color: #e9ecef;
-            color: #0d6efd;
-        }
-
-        .space-toggle {
-            color: #6c757d;
-            background: none;
-            border: none;
-        }
-        .space-toggle:hover {
-            color: #0d6efd;
-        }
-
-        /* 【修改】新增：桌面端折叠样式 */
-        /* 当 body 拥有 desktop-sidebar-hidden 类时，在大屏幕下隐藏侧边栏并扩展内容区 */
+        .sidebar .nav-link { color: #495057; border-radius: 4px; margin-bottom: 2px; }
+        .sidebar .nav-link:hover { background-color: #e9ecef; color: #0d6efd; }
+        .space-toggle { color: #6c757d; background: none; border: none; }
+        .space-toggle:hover { color: #0d6efd; }
         @media (min-width: 768px) {
-            body.desktop-sidebar-hidden #sidebarMenu {
-                display: none !important;
-            }
-            body.desktop-sidebar-hidden .content {
-                /* 强制覆盖 Bootstrap Grid 的宽度 */
-                flex: 0 0 100%;
-                max-width: 100%;
-                width: 100%;
-            }
+            body.desktop-sidebar-hidden #sidebarMenu { display: none !important; }
+            body.desktop-sidebar-hidden .content { flex: 0 0 100%; max-width: 100%; width: 100%; }
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -77,7 +45,6 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow-sm">
         <div class="container-fluid">
-            <!-- 【修改】：移除 d-md-none，使按钮在电脑端也显示，并添加 id="sidebarToggle" -->
             {% if current_user.is_authenticated %}
             <button class="btn btn-link text-white me-2 p-0 border-0" type="button" id="sidebarToggle" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle sidebar">
                 <i class="bi bi-list fs-3"></i>
@@ -105,7 +72,6 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('reservations.all_reservations') }}">所有预约</a>
                     </li>
-
                     {% if current_user.is_super_admin() %}
                     <li class="nav-item">
                         <a class="nav-link text-warning" href="{{ url_for('admin.user_management') }}">
@@ -113,7 +79,6 @@
                         </a>
                     </li>
                     {% endif %}
-
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('records.my_records') }}">我的记录</a>
                     </li>
@@ -126,12 +91,7 @@
                 {% if current_user.is_authenticated %}
                 <form class="d-flex me-3" action="{{ url_for('main.global_search') }}" method="get">
                     <div class="input-group">
-                        <input class="form-control border-0"
-                               type="search"
-                               name="query"
-                               placeholder="搜索物品/记录/空间..."
-                               aria-label="Search"
-                               style="min-width: 250px;">
+                        <input class="form-control border-0" type="search" name="query" placeholder="搜索..." aria-label="Search" style="min-width: 250px;">
                         <button class="btn btn-light" type="submit"><i class="bi bi-search"></i></button>
                     </div>
                 </form>
@@ -142,15 +102,15 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                             <i class="bi bi-person-circle me-1"></i>{{ current_user.username }}
-
                             {% if current_user.is_super_admin() %}
                             <span class="badge bg-danger text-white ms-1" style="font-size: 0.7em;">Root</span>
                             {% elif current_user.is_admin() %}
                             <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7em;">Admin</span>
                             {% endif %}
-
                         </a>
+                        <!-- 【修改】：下拉菜单增加个人中心入口，指向 auth.profile -->
                         <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                            <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="bi bi-person-gear me-2"></i>个人中心</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('auth.change_password') }}"><i class="bi bi-key me-2"></i>修改密码</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right me-2"></i>退出登录</a></li>
@@ -172,12 +132,6 @@
     <div class="container-fluid">
         <div class="row">
             {% if current_user.is_authenticated %}
-            <!--
-                【修改说明】：
-                1. 保留 d-md-block：确保电脑端默认显示（展开）。
-                2. 保留 collapse：确保移动端默认折叠（隐藏）。
-                3. id="sidebarMenu"：用于 JS 和 Bootstrap Toggle 定位。
-            -->
             <div class="col-md-3 col-lg-2 d-md-block sidebar collapse" id="sidebarMenu">
                 <div class="position-sticky pt-3 pb-3">
                     <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-2 mb-3 text-uppercase text-muted" style="font-size: 0.75rem; letter-spacing: 1px;">
@@ -192,38 +146,27 @@
                                 </a>
                             </div>
                         </li>
-
                         {% with spaces = get_space_hierarchy() %}
                             {% for item in spaces recursive %}
                             <li class="nav-item">
                                 {% if item.children %}
                                 <div class="d-flex align-items-center px-2">
-                                    <button
-                                        class="btn btn-link nav-link p-0 me-2 space-toggle"
-                                        style="width: 24px; text-decoration: none;"
-                                        data-space-id="{{ item.space.id }}"
-                                        data-bs-toggle="collapse"
-                                        data-bs-target="#spaceCollapse-{{ item.space.id }}"
-                                        aria-expanded="true">
+                                    <button class="btn btn-link nav-link p-0 me-2 space-toggle" style="width: 24px; text-decoration: none;" data-space-id="{{ item.space.id }}" data-bs-toggle="collapse" data-bs-target="#spaceCollapse-{{ item.space.id }}" aria-expanded="true">
                                         <i class="bi bi-chevron-down" style="font-size: 0.8rem;"></i>
                                     </button>
-                                    <a class="nav-link px-2 flex-grow-1"
-                                       href="{{ url_for('spaces.view', id=item.space.id) }}">
+                                    <a class="nav-link px-2 flex-grow-1" href="{{ url_for('spaces.view', id=item.space.id) }}">
                                         <i class="bi bi-folder me-2"></i> {{ item.space.name }}
                                     </a>
                                 </div>
-
                                 <div id="spaceCollapse-{{ item.space.id }}" class="collapse show ms-4 border-start border-light ps-1">
                                     <ul class="nav flex-column">
                                         {{ loop(item.children) }}
                                     </ul>
                                 </div>
-
                                 {% else %}
                                 <div class="d-flex align-items-center px-2">
                                     <span class="p-0 me-2" style="width: 24px;"></span>
-                                    <a class="nav-link px-2 flex-grow-1"
-                                       href="{{ url_for('spaces.view', id=item.space.id) }}">
+                                    <a class="nav-link px-2 flex-grow-1" href="{{ url_for('spaces.view', id=item.space.id) }}">
                                         <i class="bi bi-folder2-open me-2"></i> {{ item.space.name }}
                                     </a>
                                 </div>
@@ -237,6 +180,16 @@
             {% endif %}
 
             <main class="{% if current_user.is_authenticated %}col-md-9 ms-sm-auto col-lg-10{% else %}col-12{% endif %} content">
+                <!-- 【修改】：新增邮箱验证提示横幅 -->
+                {% if current_user.is_authenticated and (not current_user.email or not current_user.email_verified) %}
+                <div class="alert alert-warning alert-dismissible fade show mb-3 shadow-sm" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>提示：</strong> 您的邮箱尚未验证（或未设置）。
+                    <a href="{{ url_for('auth.manage_email') }}" class="alert-link">点击此处绑定/验证邮箱</a> 以启用密码找回功能。
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+
                 {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                 <div class="mb-4">
@@ -259,26 +212,19 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- 【修改】新增：控制桌面端侧边栏切换的脚本 -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var toggleBtn = document.getElementById('sidebarToggle');
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', function(e) {
-                    // 检查是否在桌面端 (宽度 >= 768px)
                     if (window.innerWidth >= 768) {
-                        // 在桌面端，我们只切换 body 的 class，通过 CSS 控制显隐
-                        // 同时阻止 Bootstrap 的默认 collapse 行为，避免状态混乱
                         e.stopPropagation();
                         document.body.classList.toggle('desktop-sidebar-hidden');
                     }
-                    // 移动端则继续使用 Bootstrap 的默认 collapse 行为
                 });
             }
         });
     </script>
-
     {% block extra_js %}{% endblock %}
 </body>
 </html>

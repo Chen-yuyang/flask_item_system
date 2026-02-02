@@ -39,11 +39,6 @@ def get_engine_url():
 config.set_main_option('sqlalchemy.url', get_engine_url())
 target_db = current_app.extensions['migrate'].db
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
-
 
 def get_metadata():
     if hasattr(target_db, 'metadatas'):
@@ -90,17 +85,22 @@ def run_migrations_online():
                 directives[:] = []
                 logger.info('No changes in schema detected.')
 
-    conf_args = current_app.extensions['migrate'].configure_args
-    if conf_args.get("process_revision_directives") is None:
-        conf_args["process_revision_directives"] = process_revision_directives
-
     connectable = get_engine()
 
     with connectable.connect() as connection:
+        # 【修正】获取 Flask-Migrate 的现有配置参数并复制一份
+        configure_args = current_app.extensions['migrate'].configure_args.copy()
+
+        # 【修正】在字典中设置 render_as_batch，防止与 **kwargs 冲突
+        # SQLite 必须开启此模式才能支持字段修改（ALTER COLUMN）
+        if configure_args.get('render_as_batch') is None:
+            configure_args['render_as_batch'] = True
+
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),
-            **conf_args
+            process_revision_directives=process_revision_directives,
+            **configure_args
         )
 
         with context.begin_transaction():
