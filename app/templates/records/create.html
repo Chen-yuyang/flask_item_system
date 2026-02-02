@@ -21,6 +21,17 @@
                 <form method="POST">
                     {{ form.hidden_tag() }}
 
+                    <!-- 【新增】：管理员选择借用人 -->
+                    {% if current_user.is_admin() %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-primary">
+                            <i class="bi bi-people-fill me-1"></i> 指定借用人 (管理员功能)
+                        </label>
+                        {{ form.target_user(class="form-select") }}
+                        <div class="form-text">您可以代表其他用户借用此物品。默认选择为您自己。</div>
+                    </div>
+                    {% endif %}
+
                     <!-- 使用地点 -->
                     <div class="mb-3">
                         {{ form.usage_location.label(class="form-label") }}

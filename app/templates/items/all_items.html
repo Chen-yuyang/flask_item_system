@@ -87,6 +87,8 @@
                         <th scope="col" class="text-muted small fw-bold text-uppercase py-3">空间路径</th>
                         <th scope="col" class="text-muted small fw-bold text-uppercase py-3">编号</th>
                         <th scope="col" class="text-center text-muted small fw-bold text-uppercase py-3">状态</th>
+                        <!-- 【新增】：当前使用者列 -->
+                        <th scope="col" class="text-center text-muted small fw-bold text-uppercase py-3">当前使用者</th>
                         <th scope="col" class="text-end text-muted small fw-bold text-uppercase py-3 pe-4" style="min-width: 200px;">操作</th>
                     </tr>
                 </thead>
@@ -121,6 +123,22 @@
                                 <span class="badge rounded-pill bg-warning bg-opacity-10 text-warning border border-warning border-opacity-10 px-3 py-2">已预约</span>
                             {% else %}
                                 <span class="badge rounded-pill bg-secondary px-3 py-2">{{ item.status }}</span>
+                            {% endif %}
+                        </td>
+                        <!-- 【新增】：动态显示当前使用者 -->
+                        <td class="text-center">
+                            {% if item.status == 'borrowed' %}
+                                {# 在模板中利用 dynamic relationship 查询 #}
+                                {% set active_record = item.records.filter_by(status='using').first() %}
+                                {% if active_record and active_record.user %}
+                                    <span class="badge bg-light text-dark border">
+                                        <i class="bi bi-person-fill text-primary"></i> {{ active_record.user.username }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted small">-</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted small">-</span>
                             {% endif %}
                         </td>
                         <td class="text-end pe-4">
@@ -230,31 +248,26 @@
         const itemCheckboxes = document.querySelectorAll('.item-checkbox');
         const countSpan = document.getElementById('selectedCount');
 
-        // 更新选中数量
         function updateCount() {
             const checkedCount = document.querySelectorAll('.item-checkbox:checked').length;
             if(countSpan) countSpan.textContent = checkedCount;
         }
 
-        // 1. 批量模式开关逻辑
         if (toggleBtn) {
             toggleBtn.addEventListener('click', function() {
                 const isHidden = batchToolbar.classList.contains('d-none');
 
                 if (isHidden) {
-                    // 开启批量模式
                     batchToolbar.classList.remove('d-none');
                     batchCols.forEach(el => el.classList.remove('d-none'));
                     this.innerHTML = '<i class="bi bi-x-lg me-2"></i>退出批量';
                     this.classList.replace('btn-outline-primary', 'btn-outline-danger');
                 } else {
-                    // 关闭批量模式
                     batchToolbar.classList.add('d-none');
                     batchCols.forEach(el => el.classList.add('d-none'));
                     this.innerHTML = '<i class="bi bi-list-check me-2"></i>批量管理';
                     this.classList.replace('btn-outline-danger', 'btn-outline-primary');
 
-                    // 清空选择
                     if (selectAll) selectAll.checked = false;
                     itemCheckboxes.forEach(cb => cb.checked = false);
                     updateCount();
@@ -262,7 +275,6 @@
             });
         }
 
-        // 2. 全选/全不选逻辑
         if (selectAll) {
             selectAll.addEventListener('change', function() {
                 itemCheckboxes.forEach(cb => cb.checked = this.checked);
@@ -270,7 +282,6 @@
             });
         }
 
-        // 3. 单个复选框变化监听
         itemCheckboxes.forEach(cb => {
             cb.addEventListener('change', updateCount);
         });

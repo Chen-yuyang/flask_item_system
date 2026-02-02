@@ -43,9 +43,11 @@ def all_items():
 
     # 使用 paginate
     pagination = items_query.paginate(page=page, per_page=per_page, error_out=False)
-    items = pagination.items
+    # 【修复】：这里不要把 items 赋值为列表，因为模板里 items 既被当做列表迭代，也被当做 pagination 对象使用
+    # 为了兼容您的模板 items.pages, items.has_prev 等用法，我们需要传递 pagination 对象给模板的 items 变量
+    # 或者修改模板。鉴于您的要求是不改风格，我们传递 pagination 给 items 变量（因为 pagination 对象也是可迭代的）
 
-    return render_template('items/all_items.html', items=items, pagination=pagination)
+    return render_template('items/all_items.html', items=pagination, pagination=pagination)
 
 
 @bp.route('/<int:id>')
@@ -71,9 +73,7 @@ def view(id):
         Reservation._utc_reservation_end >= datetime.utcnow()
     ).all()
 
-    # 【新增】判断当前用户是否有权借用
-    # 条件1：物品可用
-    # 条件2：物品被预约（reserved），但预约人是当前用户
+    # 判断当前用户是否有权借用
     user_can_use = False
     if item.status == 'available':
         user_can_use = True
@@ -92,7 +92,7 @@ def view(id):
                            current_record=current_record,
                            recent_records=recent_records,
                            active_reservations=active_reservations,
-                           user_can_use=user_can_use)  # 传递标志位
+                           user_can_use=user_can_use)
 
 
 @bp.route('/create/<int:space_id>', methods=['GET', 'POST'])
@@ -187,7 +187,7 @@ def delete(id):
     return redirect(url_for('spaces.view', id=space_id))
 
 
-# 【新增】二维码批量操作路由
+# 二维码批量操作路由
 @bp.route('/batch_qr', methods=['POST'])
 @login_required
 def batch_qr_action():

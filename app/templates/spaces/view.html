@@ -133,6 +133,8 @@
                             <th scope="col" class="text-muted small fw-bold text-uppercase py-3">功能</th>
                             <th scope="col" class="text-muted small fw-bold text-uppercase py-3">编号</th>
                             <th scope="col" class="text-center text-muted small fw-bold text-uppercase py-3">状态</th>
+                            <!-- 【新增】：当前使用者列 -->
+                            <th scope="col" class="text-center text-muted small fw-bold text-uppercase py-3">当前使用者</th>
                             <th scope="col" class="text-end text-muted small fw-bold text-uppercase py-3 pe-4" style="min-width: 200px;">操作</th>
                         </tr>
                     </thead>
@@ -163,6 +165,22 @@
                                     <span class="badge rounded-pill bg-warning bg-opacity-10 text-warning border border-warning border-opacity-10 px-3 py-2">已预约</span>
                                 {% else %}
                                     <span class="badge rounded-pill bg-secondary px-3 py-2">{{ item.status }}</span>
+                                {% endif %}
+                            </td>
+                            <!-- 【新增】：动态显示当前使用者 -->
+                            <td class="text-center">
+                                {% if item.status == 'borrowed' %}
+                                    {# 利用 dynamic relationship 在模板中查询 #}
+                                    {% set active_record = item.records.filter_by(status='using').first() %}
+                                    {% if active_record and active_record.user %}
+                                        <span class="badge bg-light text-dark border">
+                                            <i class="bi bi-person-fill text-primary"></i> {{ active_record.user.username }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted small">-</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted small">-</span>
                                 {% endif %}
                             </td>
                             <td class="text-end pe-4">
@@ -234,7 +252,7 @@
     </form>
 
     <div class="mt-4 d-flex justify-content-center">
-        {{ macros.render_pagination(pagination, 'spaces.view', id=space.id) }}
+        {{ macros.render_pagination(pagination, 'items.all_items', query=request.args.get('query'), status=request.args.get('status')) }}
     </div>
 
     {% else %}

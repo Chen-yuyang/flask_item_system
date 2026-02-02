@@ -112,53 +112,83 @@ def item_records(item_id):
 def create(item_id):
     """创建使用记录（借用物品）"""
     item = Item.query.get_or_404(item_id)
+    form = RecordCreateForm()
 
-    # 【新增】检查是否存在属于当前用户的关联预约（Active 或 Scheduled）
-    # 如果是 Active，说明正好是预约时间；如果是 Scheduled，说明是提前来取
+    # 【新增逻辑】：如果是管理员，加载用户列表供选择
+    if current_user.is_admin():
+        # 获取所有用户 (id, username)，用于填充下拉框
+        users = User.query.with_entities(User.id, User.username).all()
+        form.target_user.choices = [(u.id, u.username) for u in users]
+
+        # 默认选中当前管理员自己（如果在 GET 请求中没有指定）
+        if request.method == 'GET' and not form.target_user.data:
+            form.target_user.data = current_user.id
+
+    # 确定当前操作针对的用户（用于检查预约）
+    # 初始默认为当前登录用户，表单提交后如果管理员选了别人，则在下面更新
+    target_user_id = current_user.id
+    if current_user.is_admin() and form.validate_on_submit() and form.target_user.data:
+        target_user_id = form.target_user.data
+
+    # 【修改】：使用 target_user_id 检查关联预约
     user_reservation = Reservation.query.filter_by(
         item_id=item.id,
-        user_id=current_user.id
+        user_id=target_user_id
     ).filter(
         Reservation.status.in_(['active', 'scheduled'])
     ).first()
 
     # 检查物品状态
     if item.status == 'available':
-        # 物品可用，允许借用
-        # 但如果有预约（Scheduled状态，提前取货），应该关联处理，否则后面会变成Conflicted
         pass
     elif item.status == 'reserved':
-        # 如果是已预约状态，必须拥有有效预约（Active）
         if not user_reservation or user_reservation.status != 'active':
             flash(f'物品 "{item.name}" 已被其他用户预约，当前不可借用。', 'warning')
             return redirect(url_for('items.view', id=item_id))
     else:
-        # borrowed 或其他状态
         flash(f'物品 "{item.name}" 当前不可用，状态：{item.status}', 'danger')
         return redirect(url_for('items.view', id=item_id))
 
-    form = RecordCreateForm()
     if form.validate_on_submit():
+        # 【修改】：确定最终的借用人 ID
+        borrower_id = current_user.id
+        if current_user.is_admin() and form.target_user.data:
+            borrower_id = form.target_user.data
+
+        # 再次验证用户是否存在
+        borrower = User.query.get(borrower_id)
+        if not borrower:
+            flash('选择的用户不存在', 'danger')
+            return redirect(url_for('items.view', id=item_id))
+
         # 创建使用记录
         record = Record(
             item_id=item_id,
-            user_id=current_user.id,
+            user_id=borrower_id,  # 使用确定的借用人
             space_path=item.space.get_path(),
             usage_location=form.usage_location.data,
+            # notes=form.notes.data, # 原代码 Record 模型可能没有 notes 字段，根据您的 models.py 没有看到 notes 字段
+            # 如果 models.py 中确实没有 notes 字段，这里不能加。
+            # 根据您提供的 models.py，Record 没有 notes 字段。
             status='using'
         )
 
         # 更新物品状态
         item.status = 'borrowed'
 
-        # 【新增】消耗预约：如果存在有效或待开始的预约，将其状态更新为 used
+        # 消耗预约
         if user_reservation:
             user_reservation.status = 'used'
 
         db.session.add(record)
+        db.session.add(item)
         db.session.commit()
 
-        flash(f'成功借用物品 "{item.name}"', 'success')
+        if borrower_id == current_user.id:
+            flash(f'成功借用物品 "{item.name}"', 'success')
+        else:
+            flash(f'已代用户 {borrower.username} 借用物品 "{item.name}"', 'success')
+
         return redirect(url_for('items.view', id=item_id))
 
     return render_template('records/create.html', form=form, item=item)
@@ -185,6 +215,7 @@ def return_item(record_id):
         # 更新记录状态
         record.status = 'returned'
         record._utc_return_time = datetime.utcnow()
+        # record.notes ... (同上，Record 没有 notes 字段，不更新)
 
         # 更新物品状态
         item = record.item
