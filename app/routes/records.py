@@ -118,76 +118,98 @@ def create(item_id):
     if current_user.is_admin():
         # 获取所有用户 (id, username)，用于填充下拉框
         users = User.query.with_entities(User.id, User.username).all()
-        form.target_user.choices = [(u.id, u.username) for u in users]
+        # 添加 "ALL" 选项，ID设为 -1
+        form.target_user.choices = [(-1, '所有用户 (ALL)')] + [(u.id, u.username) for u in users]
 
         # 默认选中当前管理员自己（如果在 GET 请求中没有指定）
         if request.method == 'GET' and not form.target_user.data:
-            form.target_user.data = current_user.id
+            form.target_user.data = [current_user.id]
 
-    # 确定当前操作针对的用户（用于检查预约）
-    # 初始默认为当前登录用户，表单提交后如果管理员选了别人，则在下面更新
-    target_user_id = current_user.id
-    if current_user.is_admin() and form.validate_on_submit() and form.target_user.data:
-        target_user_id = form.target_user.data
+    # 状态检查逻辑优化：
+    if not current_user.is_admin():
+        user_reservation = Reservation.query.filter_by(
+            item_id=item.id,
+            user_id=current_user.id
+        ).filter(
+            Reservation.status.in_(['active', 'scheduled'])
+        ).first()
 
-    # 【修改】：使用 target_user_id 检查关联预约
-    user_reservation = Reservation.query.filter_by(
-        item_id=item.id,
-        user_id=target_user_id
-    ).filter(
-        Reservation.status.in_(['active', 'scheduled'])
-    ).first()
-
-    # 检查物品状态
-    if item.status == 'available':
-        pass
-    elif item.status == 'reserved':
-        if not user_reservation or user_reservation.status != 'active':
-            flash(f'物品 "{item.name}" 已被其他用户预约，当前不可借用。', 'warning')
+        # 检查物品状态
+        if item.status == 'available':
+            pass
+        elif item.status == 'reserved':
+            if not user_reservation or user_reservation.status != 'active':
+                flash(f'物品 "{item.name}" 已被其他用户预约，当前不可借用。', 'warning')
+                return redirect(url_for('items.view', id=item_id))
+        else:
+            flash(f'物品 "{item.name}" 当前不可用，状态：{item.status}', 'danger')
             return redirect(url_for('items.view', id=item_id))
-    else:
-        flash(f'物品 "{item.name}" 当前不可用，状态：{item.status}', 'danger')
-        return redirect(url_for('items.view', id=item_id))
 
     if form.validate_on_submit():
-        # 【修改】：确定最终的借用人 ID
-        borrower_id = current_user.id
-        if current_user.is_admin() and form.target_user.data:
-            borrower_id = form.target_user.data
+        # 【修改】：确定最终的借用人 ID 列表
+        target_user_ids = []
 
-        # 再次验证用户是否存在
-        borrower = User.query.get(borrower_id)
-        if not borrower:
-            flash('选择的用户不存在', 'danger')
-            return redirect(url_for('items.view', id=item_id))
-
-        # 创建使用记录
-        record = Record(
-            item_id=item_id,
-            user_id=borrower_id,  # 使用确定的借用人
-            space_path=item.space.get_path(),
-            usage_location=form.usage_location.data,
-            # notes=form.notes.data, # 原代码 Record 模型可能没有 notes 字段，根据您的 models.py 没有看到 notes 字段
-            # 如果 models.py 中确实没有 notes 字段，这里不能加。
-            # 根据您提供的 models.py，Record 没有 notes 字段。
-            status='using'
-        )
-
-        # 更新物品状态
-        item.status = 'borrowed'
-
-        # 消耗预约
-        if user_reservation:
-            user_reservation.status = 'used'
-
-        db.session.add(record)
-        db.session.add(item)
-        db.session.commit()
-
-        if borrower_id == current_user.id:
-            flash(f'成功借用物品 "{item.name}"', 'success')
+        if current_user.is_admin():
+            selected_data = form.target_user.data
+            if selected_data:
+                # 检查是否选择了 "ALL" (-1)
+                if -1 in selected_data:
+                    all_users = User.query.with_entities(User.id).all()
+                    target_user_ids = [u.id for u in all_users]
+                else:
+                    target_user_ids = selected_data
+            else:
+                # 管理员没选任何人，默认自己
+                target_user_ids = [current_user.id]
         else:
-            flash(f'已代用户 {borrower.username} 借用物品 "{item.name}"', 'success')
+            # 普通用户只能是自己
+            target_user_ids = [current_user.id]
+
+        created_count = 0
+
+        # 遍历用户列表创建记录
+        for user_id in target_user_ids:
+            # 再次验证用户是否存在
+            borrower = User.query.get(user_id)
+            if not borrower:
+                continue
+
+            # 查找该用户是否有相关预约（为了消耗预约）
+            user_res = Reservation.query.filter_by(
+                item_id=item.id,
+                user_id=user_id
+            ).filter(
+                Reservation.status.in_(['active', 'scheduled'])
+            ).first()
+
+            # 创建使用记录
+            record = Record(
+                item_id=item_id,
+                user_id=user_id,
+                space_path=item.space.get_path(),
+                usage_location=form.usage_location.data,
+                status='using'
+            )
+
+            # 消耗预约
+            if user_res:
+                user_res.status = 'used'
+
+            db.session.add(record)
+            created_count += 1
+
+        if created_count > 0:
+            # 更新物品状态
+            item.status = 'borrowed'
+            db.session.add(item)
+            db.session.commit()
+
+            if created_count == 1 and target_user_ids[0] == current_user.id:
+                flash(f'成功借用物品 "{item.name}"', 'success')
+            else:
+                flash(f'已成功为 {created_count} 位用户创建借用记录', 'success')
+        else:
+            flash('未创建任何记录', 'warning')
 
         return redirect(url_for('items.view', id=item_id))
 
@@ -217,14 +239,30 @@ def return_item(record_id):
         record._utc_return_time = datetime.utcnow()
         # record.notes ... (同上，Record 没有 notes 字段，不更新)
 
-        # 更新物品状态
-        item = record.item
-        item.status = 'available'
+        # 【修改逻辑】：只有当该物品没有其他正在进行的借用记录时，才将物品状态设为 available
+        # 查询该物品其他 'using' 状态的记录（排除当前这条）
+        other_active_count = Record.query.filter(
+            Record.item_id == record.item_id,
+            Record.status == 'using',
+            Record.id != record.id
+        ).count()
+
+        if other_active_count == 0:
+            # 只有没有其他人使用时，才释放物品
+            item = record.item
+            item.status = 'available'
+        else:
+            # 否则保持 borrowed 状态
+            pass
 
         db.session.commit()
 
-        flash(f'成功归还物品 "{item.name}"')
-        return redirect(url_for('items.view', id=item.id))
+        if other_active_count == 0:
+            flash(f'成功归还物品 "{record.item.name}"，物品已变更为可用状态。')
+        else:
+            flash(f'已结束您的使用记录，但物品 "{record.item.name}" 仍被其他 {other_active_count} 人使用中。')
+
+        return redirect(url_for('items.view', id=record.item.id))
 
     return render_template('records/return.html', form=form, record=record)
 
@@ -245,11 +283,23 @@ def delete(record_id):
     # 3. 记录删除信息（用于日志或提示，可选）
     item_name = record.item.name
 
-    # 【修改】：如果该记录是“使用中”，则在删除前释放物品
+    # 【修改】：如果该记录是“使用中”，则在删除前检查是否释放物品
     reset_msg = ""
     if record.status == 'using':
-        record.item.status = 'available'
-        reset_msg = "，同时物品状态已重置为“可用”"
+        # 核心修复：查询同一物品下，状态为 using 且不是当前这条记录的数量
+        other_active_count = Record.query.filter(
+            Record.item_id == record.item_id,
+            Record.status == 'using',
+            Record.id != record.id
+        ).count()
+
+        if other_active_count == 0:
+            # 没有其他人在用，可以释放
+            record.item.status = 'available'
+            reset_msg = "，同时物品状态已重置为“可用”"
+        else:
+            # 还有其他人在用，不改变物品状态
+            reset_msg = f"，但物品仍被其他 {other_active_count} 人使用中，状态保持为“正在使用”"
 
     # 4. 执行删除操作
     db.session.delete(record)

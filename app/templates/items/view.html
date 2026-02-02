@@ -91,33 +91,38 @@
         </div>
 
         <!-- 2. 动态状态卡片 (借用中/预约中) -->
-        {% if current_record or active_reservations %}
+        {# 【修改】: 获取所有正在使用的记录 #}
+        {% set active_records = item.records.filter_by(status='using').all() %}
+
+        {% if active_records or active_reservations %}
         <div class="card shadow-sm border-0 rounded-4 mb-4 border-start border-4 border-warning">
             <div class="card-body p-4">
                 <h5 class="fw-bold mb-3">当前状态详情</h5>
 
-                <!-- 正在使用 -->
-                {% if current_record %}
-                <div class="alert alert-light border d-flex align-items-center justify-content-between mb-3">
-                    <div>
-                        <span class="badge bg-danger me-2">使用中</span>
-                        <strong>{{ current_record.user.username }}</strong>
-                        <span class="text-muted small mx-2">|</span>
-                        <small class="text-muted">开始于: {{ current_record.start_time.strftime('%m-%d %H:%M') }}</small>
-                        {% if current_record.usage_location %}
-                        <div class="small text-muted mt-1"><i class="bi bi-pin-map me-1"></i>{{ current_record.usage_location }}</div>
+                <!-- 正在使用 (支持循环显示多个人) -->
+                {% if active_records %}
+                    {% for record in active_records %}
+                    <div class="alert alert-light border d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <span class="badge bg-danger me-2">使用中</span>
+                            <strong>{{ record.user.username }}</strong>
+                            <span class="text-muted small mx-2">|</span>
+                            <small class="text-muted">开始于: {{ record.start_time.strftime('%m-%d %H:%M') }}</small>
+                            {% if record.usage_location %}
+                            <div class="small text-muted mt-1"><i class="bi bi-pin-map me-1"></i>{{ record.usage_location }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- 归还按钮 -->
+                        {% if current_user.is_admin() or record.user_id == current_user.id %}
+                        <form action="{{ url_for('records.return_item', record_id=record.id) }}" method="get">
+                            <button type="submit" class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>归还
+                            </button>
+                        </form>
                         {% endif %}
                     </div>
-
-                    <!-- 归还按钮 -->
-                    {% if current_user.is_admin() or current_record.user_id == current_user.id %}
-                    <form action="{{ url_for('records.return_item', record_id=current_record.id) }}" method="get">
-                        <button type="submit" class="btn btn-sm btn-outline-success">
-                            <i class="bi bi-box-arrow-in-right me-1"></i>归还
-                        </button>
-                    </form>
-                    {% endif %}
-                </div>
+                    {% endfor %}
                 {% endif %}
 
                 <!-- 有效预约 -->

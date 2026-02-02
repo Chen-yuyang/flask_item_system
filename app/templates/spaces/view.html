@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% import "_macros.html" as macros %}
 
+{# 修复：这里应该是 space.name，之前的 item.name 导致了报错 #}
 {% block title %}{{ space.name }} - 物品管理系统{% endblock %}
 
 {% block content %}
@@ -133,7 +134,7 @@
                             <th scope="col" class="text-muted small fw-bold text-uppercase py-3">功能</th>
                             <th scope="col" class="text-muted small fw-bold text-uppercase py-3">编号</th>
                             <th scope="col" class="text-center text-muted small fw-bold text-uppercase py-3">状态</th>
-                            <!-- 【新增】：当前使用者列 -->
+                            <!-- 当前使用者列 -->
                             <th scope="col" class="text-center text-muted small fw-bold text-uppercase py-3">当前使用者</th>
                             <th scope="col" class="text-end text-muted small fw-bold text-uppercase py-3 pe-4" style="min-width: 200px;">操作</th>
                         </tr>
@@ -167,14 +168,17 @@
                                     <span class="badge rounded-pill bg-secondary px-3 py-2">{{ item.status }}</span>
                                 {% endif %}
                             </td>
-                            <!-- 【新增】：动态显示当前使用者 -->
+                            <!-- 【修改】：支持显示多个使用者 -->
                             <td class="text-center">
                                 {% if item.status == 'borrowed' %}
-                                    {# 利用 dynamic relationship 在模板中查询 #}
-                                    {% set active_record = item.records.filter_by(status='using').first() %}
-                                    {% if active_record and active_record.user %}
-                                        <span class="badge bg-light text-dark border">
-                                            <i class="bi bi-person-fill text-primary"></i> {{ active_record.user.username }}
+                                    {# 获取所有正在使用的记录 #}
+                                    {% set active_records = item.records.filter_by(status='using').all() %}
+                                    {% if active_records %}
+                                        <span class="badge bg-light text-dark border text-wrap">
+                                            <i class="bi bi-person-fill text-primary"></i>
+                                            {% for record in active_records %}
+                                                {{ record.user.username }}{% if not loop.last %}, {% endif %}
+                                            {% endfor %}
                                         </span>
                                     {% else %}
                                         <span class="text-muted small">-</span>
@@ -252,8 +256,7 @@
     </form>
 
     <div class="mt-4 d-flex justify-content-center">
-        {# 【修改】: 修复分页链接。之前的 'items.all_items' 会导致跳转到全部物品列表。 #}
-        {# 这里改为 'spaces.view' 并传入当前空间的 id #}
+        {# 【修改】: 修复分页链接 #}
         {{ macros.render_pagination(pagination, 'spaces.view', id=space.id) }}
     </div>
 

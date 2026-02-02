@@ -27,8 +27,13 @@
                         <label class="form-label fw-bold text-primary">
                             <i class="bi bi-people-fill me-1"></i> 指定借用人 (管理员功能)
                         </label>
-                        {{ form.target_user(class="form-select") }}
-                        <div class="form-text">您可以代表其他用户借用此物品。默认选择为您自己。</div>
+                        <!-- 使用 SelectMultipleField 渲染，通常不需要额外 class，但 form-select 会美化它 -->
+                        {{ form.target_user(class="form-select", size="6") }}
+                        <div class="form-text">
+                            <i class="bi bi-info-circle"></i>
+                            操作提示：按住 <strong>Ctrl</strong> (Windows) 或 <strong>Command</strong> (Mac) 键可进行多选。
+                            选择 <strong>"所有用户 (ALL)"</strong> 将为系统内所有用户创建记录。
+                        </div>
                     </div>
                     {% endif %}
 
