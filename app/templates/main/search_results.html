@@ -14,24 +14,25 @@
     </span>
 </div>
 
-<!-- 搜索范围说明 -->
-{% if total_results == 0 %}
-<div class="alert alert-light border shadow-sm rounded-4 text-center py-5 mb-4">
-    <i class="bi bi-search display-1 text-secondary opacity-25 mb-3 d-block"></i>
-    <h5 class="text-muted">未找到与 "{{ query }}" 匹配的内容</h5>
-    <p class="text-secondary small">建议尝试缩短关键词、使用更通用的词汇，或检查输入拼写。</p>
-</div>
-{% else %}
+<!-- 【修改】：搜索范围说明（始终显示） -->
 <div class="alert alert-info border-0 bg-info bg-opacity-10 rounded-4 mb-4 d-flex align-items-start" role="alert">
     <i class="bi bi-info-circle-fill text-info fs-5 me-3 mt-1"></i>
     <div>
         <h6 class="alert-heading fw-bold text-info-emphasis">匹配说明</h6>
         <ul class="mb-0 small text-info-emphasis ps-3">
             <li><strong>物品</strong>：匹配名称、功能描述、唯一编号</li>
-            <li><strong>记录</strong>：匹配使用地点、空间路径</li>
+            <!-- 【修改】：增加“使用人”说明 -->
+            <li><strong>记录</strong>：匹配使用地点、空间路径、使用人</li>
             <li><strong>空间</strong>：匹配空间名称</li>
         </ul>
     </div>
+</div>
+
+{% if total_results == 0 %}
+<div class="alert alert-light border shadow-sm rounded-4 text-center py-5 mb-4">
+    <i class="bi bi-search display-1 text-secondary opacity-25 mb-3 d-block"></i>
+    <h5 class="text-muted">未找到与 "{{ query }}" 匹配的内容</h5>
+    <p class="text-secondary small">建议尝试缩短关键词、使用更通用的词汇，或检查输入拼写。</p>
 </div>
 {% endif %}
 

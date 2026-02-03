@@ -2,7 +2,8 @@ from datetime import datetime
 
 from flask import Blueprint, render_template, request
 from flask_login import login_required, current_user
-from app.models import Item, Record, Reservation, Space
+# 【修改】：导入 User 模型以支持联表查询
+from app.models import Item, Record, Reservation, Space, User
 from app.routes.spaces import get_space_hierarchy
 
 bp = Blueprint('main', __name__)
@@ -45,9 +46,11 @@ def global_search():
         ).all()
 
         # 搜索记录
-        results['records'] = Record.query.filter(
+        # 【修改】：联表查询 User，增加按用户名搜索的条件
+        results['records'] = Record.query.join(User).filter(
             (Record.usage_location.ilike(f'%{query}%') |
-             Record.space_path.ilike(f'%{query}%'))
+             Record.space_path.ilike(f'%{query}%') |
+             User.username.ilike(f'%{query}%'))
         ).all()
 
         # 搜索空间
