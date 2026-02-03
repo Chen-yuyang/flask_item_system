@@ -64,3 +64,5 @@ def global_search():
                            query=query,
                            results=results,
                            total_results=total_results)
+
+
