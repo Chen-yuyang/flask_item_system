@@ -36,4 +36,4 @@ def manual_check_overdue():
 
 if __name__ == '__main__':
     # debug 由配置类自动决定（DevelopmentConfig=True，ProductionConfig=False）
-    app.run(host="0.0.0.0", port=5000, debug=app.config['FLASK_DEBUG'])
+    app.run(host="0.0.0.0", port=5000, debug=app.config['DEBUG'])
