@@ -23,7 +23,7 @@
         <p><strong>借用信息：</strong></p>
         <p>借用时间：{{ record.start_time.strftime('%Y-%m-%d %H:%M') }}</p>
         <p>使用地点：{{ record.usage_location or '未填写' }}</p>
-        <p>已逾期时长：{{ (datetime.utcnow() - record.start_time).days - 10 }} 天</p>
+        <p>已逾期时长：{{ overdue_days }} 天</p>
     </div>
 
     {% if recipient_type == 'user' %}

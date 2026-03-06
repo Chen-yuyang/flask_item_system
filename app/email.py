@@ -43,6 +43,7 @@ def send_overdue_reminder(record, recipient_type='user'):
     """发送逾期提醒邮件"""
     from app.models import User
     from datetime import datetime
+    import pytz
 
     if recipient_type == 'user':
         recipient = record.user.email
@@ -54,11 +55,16 @@ def send_overdue_reminder(record, recipient_type='user'):
         recipient = admin.email
         subject = f'用户 {record.user.username} 的物品已逾期'
 
+    # 计算逾期天数（使用UTC时间进行计算，避免时区问题）
+    now_utc = datetime.utcnow().replace(tzinfo=pytz.utc)
+    start_time_utc = record._utc_start_time.replace(tzinfo=pytz.utc)
+    overdue_days = (now_utc - start_time_utc).days - 10
+
     send_email(
         recipient,
         subject,
         'records/email/overdue_reminder.html',
         record=record,
         recipient_type=recipient_type,
-        datetime=datetime
+        overdue_days=overdue_days
     )
